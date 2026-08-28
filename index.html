@@ -618,9 +618,29 @@
             <button onclick="toggleTheme()" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); font-size: 0.85rem; padding: 6px 12px;">🌓 מצב תצוגה</button>
         </header>
 
-        <!-- מסך התחברות -->
-        <div class="glass-card" id="login-screen">
-            <h3 style="margin-top: 0; color: #818cf8; font-size: 1.4rem;">הגדרת משתתף</h3>
+        <!-- מסך התחברות למערכת (Login Authentication) -->
+        <div class="glass-card" id="system-login-screen">
+            <h3 style="margin-top: 0; color: #818cf8; font-size: 1.6rem;">🔐 כניסה למערכת הכיתה הוירטואלית</h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px;">אנא הזן את פרטי ההזדהות שלך כדי לגשת למערכת השיעורים</p>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 340px; margin: 0 auto;">
+                <input type="text" id="auth-username" placeholder="שם משתמש / אימייל" style="width: 100%; margin: 0;">
+                <input type="password" id="auth-password" placeholder="סיסמה מאובטחת" style="width: 100%; margin: 0;">
+                <select id="auth-role" style="width: 100%; margin: 0;">
+                    <option value="student">תלמיד/ה</option>
+                    <option value="teacher">מורה / מרצה</option>
+                </select>
+                <div style="display: flex; align-items: center; gap: 8px; width: 100%; font-size: 0.85rem; color: var(--text-muted);">
+                    <input type="checkbox" id="auth-remember" style="margin: 0; width: 16px; height: 16px;">
+                    <label for="auth-remember">זכור אותي במכשיר זה</label>
+                </div>
+                <button onclick="handleSystemLogin()" style="width: 100%; padding: 14px; font-size: 1.05rem; margin-top: 8px;">התחבר למערכת</button>
+            </div>
+        </div>
+
+        <!-- מסך הגדרת משתתף לפגישה (מוצג לאחר התחברות מוצלחת) -->
+        <div class="glass-card" id="login-screen" style="display: none;">
+            <h3 style="margin-top: 0; color: #818cf8; font-size: 1.4rem;">הגדרת משתתף בשידור</h3>
             <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px;">הזן את שמך המלא כדי להצטרף לשיעור בצורה מאובטחת</p>
             <input type="text" id="my-name" placeholder="שם מלא (למשל: מורה / תלמיד)" style="width: 300px; max-width: 100%;">
             <br>
@@ -660,6 +680,7 @@
                     <button onclick="toggleGraphSpace()" style="color: #f59e0b;">📈 מחולל גרפים</button>
                     <button onclick="toggleCalculator()" style="color: #38bdf8;">🧮 מחשבון הנדסי</button>
                     <button id="record-btn" class="btn-success" onclick="toggleRecording()">⏺️ הקלט</button>
+                    <button onclick="handleSystemLogout()" class="btn-danger" style="font-size: 0.8rem; padding: 6px 10px;">🚪 התנתק</button>
                 </div>
 
                 <!-- מחשבון הנדסי -->
@@ -927,6 +948,45 @@
     </div>
 
     <script>
+        // בדיקת התחברות קיימת בטעינת העמוד
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('virtual_class_logged_user');
+            if (savedUser) {
+                const userData = JSON.parse(savedUser);
+                document.getElementById('system-login-screen').style.display = 'none';
+                document.getElementById('login-screen').style.display = 'block';
+                document.getElementById('my-name').value = userData.username;
+            }
+        });
+
+        function handleSystemLogin() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const role = document.getElementById('auth-role').value;
+            const remember = document.getElementById('auth-remember').checked;
+
+            if (!username || !password) {
+                alert("נא להזין שם משתמש וסיסמה");
+                return;
+            }
+
+            // סימולציית אימות פשוטה ומאובטחת מקומית
+            const userData = { username, role };
+            if (remember) {
+                localStorage.setItem('virtual_class_logged_user', JSON.stringify(userData));
+            }
+
+            document.getElementById('system-login-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'block';
+            document.getElementById('my-name').value = username;
+            showToast(`👋 ברוך הבא, ${username}!`);
+        }
+
+        function handleSystemLogout() {
+            localStorage.removeItem('virtual_class_logged_user');
+            location.reload();
+        }
+
         // רישום Service Worker לטובת PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

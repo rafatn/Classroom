@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת כיתה וירטואלית עם קוד כיתה מהמורה</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: 500; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 11px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover { background: #0056b3; }
+        .secondary-btn { background: #28a745; margin-top: 5px; }
+        .secondary-btn:hover { background: #218838; }
+        .link-btn {
+            background: none;
+            color: #007bff;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            text-decoration: underline;
+            width: auto;
+            display: inline;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .error { color: #dc3545; font-size: 14px; margin-top: 5px; text-align: center; }
+        .code-display {
+            font-size: 32px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            letter-spacing: 6px;
+            background: #e8f5e9;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- מסך התחברות / הרשמה ראשונית -->
+    <div class="card" id="auth-card">
+        <h2 id="form-title">התחברות למערכת</h2>
+        
+        <div id="login-form-section">
+            <div class="form-group">
+                <label>שם משתמש</label>
+                <input type="text" id="username" placeholder="הכנס שם משתמש">
+            </div>
+            <div class="form-group">
+                <label>סיסמה</label>
+                <input type="password" id="password" placeholder="הכנס סיסמה">
+            </div>
+            
+            <!-- בחירת תפקיד בהרשמה או זיהוי אוטומטי -->
+            <div class="form-group" id="role-group" style="display: none;">
+                <label>תפקיד במערכת</label>
+                <select id="user-role">
+                    <option value="student">תלמיד</option>
+                    <option value="teacher">מורה</option>
+                </select>
+            </div>
+
+            <div id="auth-error" class="error"></div>
+            <button onclick="handleAuth()">המשך</button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <span id="toggle-text">אין לך חשבון עדיין?</span>
+                <button class="link-btn" onclick="toggleMode()">הירשם עכשיו</button>
+            </div>
+        </div>
+
+        <!-- שלב הזנת קוד כיתה לתלמיד (אחרי שהתחבר עם שם משתמש וסיסמה) -->
+        <div id="student-otp-section" style="display: none;">
+            <p style="text-align: center; color: #666;">שלום <span id="student-name-display" style="font-weight:bold;"></span>,<br>נא הכנס את קוד הכיתה שקיבלת מהמורה:</p>
+            <div class="form-group">
+                <input type="text" id="entered-class-code" placeholder="הכנס קוד כיתה (6 ספרות)" style="text-align: center; font-size: 20px; letter-spacing: 3px;">
+            </div>
+            <div id="student-otp-error" class="error"></div>
+            <button onclick="verifyStudentCode()">הכנס לכיתה</button>
+        </div>
+
+        <!-- מסך ניהול קוד כיתה למורה (אחרי שהתחבר כמורה) -->
+        <div id="teacher-dashboard-section" style="display: none;">
+            <p style="text-align: center; color: #666;">שלום מורה 👨‍🏫, באפשרותך לייצר קוד כיתה חדש ולהעביר אותו לתלמידים:</p>
+            
+            <div class="code-display" id="teacher-active-code">------</div>
+            
+            <button class="secondary-btn" onclick="generateNewClassCode()">🔄 צור קוד כיתה חדש</button>
+            <button onclick="speakClassCode()" style="background: #17a2b8; margin-top: 5px;">🔊 השמע קוד בקול</button>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
+            <button onclick="enterTeacherClassroom()" style="background: #28a745;">היכנס למרחב הניהול / הכיתה</button>
+            <button onclick="logout()" style="background: #dc3545; margin-top: 10px;">התנתק</button>
+        </div>
+    </div>
+
+    <!-- מסך הכיתה הוירטואלית הפתוחה (לתלמיד או למורה) -->
+    <div id="classroom-card" style="display: none; width: 90%; height: 90%; max-width: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+            <h2>כיתה וירטואלית פעילה 🎓 (<span id="user-role-title"></span>)</h2>
+            <div>
+                שלום, <span id="logged-username" style="font-weight: bold; color: #007bff;"></span> | 
+                <button onclick="logout()" style="width: auto; padding: 5px 10px; background: #dc3545; margin: 0;">התנתק</button>
+            </div>
+        </div>
+        <div style="flex: 1; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <p style="font-size: 18px; color: #555;">הכיתה פתוחה והחיבור הצליח! כאן יופיע כל ממשק הכלים שלך.</p>
+        </div>
+    </div>
+
+<script>
+    let isRegisterMode = false;
+    let currentUser = null;
+
+    // אתחול קוד כיתה גלובלי ב-localStorage אם אינו קיים
+    if (!localStorage.getItem('active_class_code')) {
+        localStorage.setItem('active_class_code', '123456');
+    }
+
+    function toggleMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById('form-title').innerText = isRegisterMode ? 'הרשמה למערכת' : 'התחברות למערכת';
+        document.getElementById('toggle-text').innerText = isRegisterMode ? 'כבר יש לך חשבון?' : 'אין לך חשבון עדיין?';
+        document.querySelector('.link-btn').innerText = isRegisterMode ? 'התחבר כאן' : 'הירשם עכשיו';
+        document.getElementById('role-group').style.display = isRegisterMode ? 'block' : 'none';
+        document.getElementById('auth-error').innerText = '';
+    }
+
+    function handleAuth() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        const errDiv = document.getElementById('auth-error');
+
+        if (!u || !p) {
+            errDiv.innerText = 'נא למלא את כל השדות';
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('local_users') || '{}');
+
+        if (isRegisterMode) {
+            if (users[u]) {
+                errDiv.innerText = 'שם המשתמש כבר קיים במערכת';
+                return;
+            }
+            const role = document.getElementById('user-role').value;
+            users[u] = { password: p, role: role };
+            localStorage.setItem('local_users', JSON.stringify(users));
+            alert('ההרשמה בוצעה בהצלחה! כעת התחבר למערכת.');
+            toggleMode();
+            return;
+        }
+
+        // התחברות
+        if (!users[u] || users[u].password !== p) {
+            errDiv.innerText = 'שם משתמש או סיסמה שגויים';
+            return;
+        }
+
+        currentUser = { username: u, role: users[u].role };
+
+        // ניתוב בהתאם לתפקיד המשתמש
+        document.getElementById('login-form-section').style.display = 'none';
+
+        if (currentUser.role === 'teacher') {
+            // מורה עובר ללוח הבקרה שלו שבו רואים ומייצרים את קוד הכיתה
+            document.getElementById('form-title').innerText = 'לוח בקרה למורה';
+            document.getElementById('teacher-dashboard-section').style.display = 'block';
+            updateTeacherCodeDisplay();
+        } else {
+            // תלמיד עובר לשלב הזנת קוד הכיתה מהמורה
+            document.getElementById('form-title').innerText = 'הזנת קוד כיתה';
+            document.getElementById('student-name-display').innerText = u;
+            document.getElementById('student-otp-section').style.display = 'block';
+        }
+    }
+
+    // ניהול קוד הכיתה מצד המורה
+    function updateTeacherCodeDisplay() {
+        const code = localStorage.getItem('active_class_code');
+        document.getElementById('teacher-active-code').innerText = code;
+    }
+
+    function generateNewClassCode() {
+        const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+        localStorage.setItem('active_class_code', newCode);
+        updateTeacherCodeDisplay();
+        alert('נוצר קוד כיתה חדש בהצלחה! העבר אותו לתלמידים.');
+    }
+
+    function speakClassCode() {
+        const code = localStorage.getItem('active_class_code');
+        const spaced = code.split('').join(' ');
+        const text = `קוד הכיתה החדש הוא: ${spaced}. שוב: ${spaced}`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'he-IL';
+        utterance.rate = 0.85;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function enterTeacherClassroom() {
+        document.getElementById('auth-card').style.display = 'none';
+        document.getElementById('classroom-card').style.display = 'flex';
+        document.getElementById('logged-username').innerText = currentUser.username;
+        document.getElementById('user-role-title').innerText = 'מורה';
+    }
+
+    // אימות קוד הכיתה מצד התלמיד
+    function verifyStudentCode() {
+        const entered = document.getElementById('entered-class-code').value.trim();
+        const activeCode = localStorage.getItem('active_class_code');
+        const errDiv = document.getElementById('student-otp-error');
+
+        if (entered === activeCode) {
+            document.getElementById('auth-card').style.display = 'none';
+            document.getElementById('classroom-card').style.display = 'flex';
+            document.getElementById('logged-username').innerText = currentUser.username;
+            document.getElementById('user-role-title').innerText = 'תלמיד';
+        } else {
+            errDiv.innerText = 'קוד הכיתה שגוי. בקש מהמורה את הקוד המעודכן.';
+        }
+    }
+
+    function logout() {
+        currentUser = null;
+        document.getElementById('entered-class-code').value = '';
+        document.getElementById('student-otp-error').innerText = '';
+        document.getElementById('student-otp-section').style.display = 'none';
+        document.getElementById('teacher-dashboard-section').style.display = 'none';
+        document.getElementById('login-form-section').style.display = 'block';
+        document.getElementById('form-title').innerText = 'התחברות למערכת';
+        document.getElementById('classroom-card').style.display = 'none';
+        document.getElementById('auth-card').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
